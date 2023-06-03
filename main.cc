@@ -23,9 +23,28 @@ ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
 SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 #include <iostream>
+#include <string>
+#include <filesystem>
 #include <boost/program_options.hpp>
 int 
 main(int argc, char* argv[]) {
+    boost::program_options::options_description desc("Allowed options");
+    desc.add_options()
+        ("help,h", "produce help message")
+        ("source", boost::program_options::value<std::filesystem::path>(), "source file to be decomposed")
+        ;
+    boost::program_options::variables_map vm;
+    boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
+    boost::program_options::notify(vm);
 
+    if (vm.count("help")) {
+        std::cout << desc << std::endl;
+        return 1;
+    }
+    if (!vm.count("source")) {
+        std::cout << "source input file was not set!" << std::endl;
+        return 1;
+    } 
+    std::filesystem::path inputFile = vm["source"].as<std::filesystem::path>();
     return 0;
 }
