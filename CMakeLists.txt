@@ -1,0 +1,8 @@
+cmake_minimum_required(VERSION 3.10)
+project(data_splitter VERSION 0.1)
+set(CMAKE_CXX_STANDARD 20)
+find_package(Boost
+	REQUIRED
+	COMPONENTS program_options)
+add_executable(data_splitter
+	main.cc)
