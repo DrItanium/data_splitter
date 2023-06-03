@@ -6,3 +6,5 @@ find_package(Boost
 	COMPONENTS program_options)
 add_executable(data_splitter
 	main.cc)
+
+target_link_libraries(data_splitter Boost::program_options)
