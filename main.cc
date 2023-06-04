@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 #include <boost/program_options.hpp>
 void
-doAction(const std::filesystem::path& basePath, std::istream& inputFile, uint32_t numberOfSplits) {
+doAction(const std::filesystem::path& basePath, std::istream& inputFile, size_t numberOfSplits) {
     // okay, at this point we need to open the four files that we are going to
     // be dumping data into!
     auto outputs = std::make_unique<std::ofstream[]>(numberOfSplits);
@@ -40,7 +40,7 @@ doAction(const std::filesystem::path& basePath, std::istream& inputFile, uint32_
     auto theStem = basePath.stem();
     auto theExtension = basePath.extension();
     int errorCode = 0;
-    for (int i = 0; i < numberOfSplits; ++i) {
+    for (size_t i = 0; i < numberOfSplits; ++i) {
         // construct 0,1,2,3 versions of the source file
         std::stringstream theFilename;
         auto pathCopy = basePath;
@@ -54,9 +54,20 @@ doAction(const std::filesystem::path& basePath, std::istream& inputFile, uint32_
             throw std::runtime_error(str);
         }
     }
+
+    while (inputFile.good()) {
+        for (size_t i = 0; i < numberOfSplits; ++i) {
+            auto value = inputFile.get();
+            if (inputFile.fail() || inputFile.eof()) {
+                return;
+            } else {
+                outputs[i].put(value);
+            }
+        }
+    }
 }
 void
-doAction(const std::filesystem::path& inputFile, uint32_t numberOfSplits) {
+doAction(const std::filesystem::path& inputFile, size_t numberOfSplits) {
         if (!std::filesystem::exists(inputFile)) {
             std::stringstream msg;
             msg << "The given source input file " << inputFile << " does not exist!" << std::endl;
@@ -82,12 +93,12 @@ doAction(const std::filesystem::path& inputFile, uint32_t numberOfSplits) {
 }
 int 
 main(int argc, char* argv[]) {
-    uint32_t numberOfSplits = 0;
+    size_t numberOfSplits = 0;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("help,h", "produce help message")
         ("source", boost::program_options::value<std::filesystem::path>(), "source file to be decomposed")
-        ("divide-into", boost::program_options::value<uint32_t>(&numberOfSplits)->default_value(4), "number of files to split the input into!")
+        ("divide-into", boost::program_options::value<size_t>(&numberOfSplits)->default_value(4), "number of files to split the input into!")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
