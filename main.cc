@@ -108,6 +108,10 @@ main(int argc, char* argv[]) {
         std::cout << desc << std::endl;
         return 1;
     }
+    if (numberOfSplits < 2) {
+        std::cout << "number of splits is less than 2!" << std::endl;
+        return 1;
+    }
     try {
         if (vm.count("source")) {
            std::filesystem::path inputFile = vm["source"].as<std::filesystem::path>();
