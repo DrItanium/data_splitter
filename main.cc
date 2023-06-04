@@ -25,13 +25,75 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <iostream>
 #include <string>
 #include <filesystem>
+#include <fstream>
+#include <sstream>
+#include <exception>
+#include <stdexcept>
+#include <memory>
 #include <boost/program_options.hpp>
+void
+doAction(const std::filesystem::path& basePath, std::istream& inputFile, uint32_t numberOfSplits) {
+    // okay, at this point we need to open the four files that we are going to
+    // be dumping data into!
+    auto outputs = std::make_unique<std::ofstream[]>(numberOfSplits);
+    auto parentPath = basePath.parent_path();
+    auto theStem = basePath.stem();
+    auto theExtension = basePath.extension();
+    int errorCode = 0;
+    for (int i = 0; i < numberOfSplits; ++i) {
+        // construct 0,1,2,3 versions of the source file
+        std::stringstream theFilename;
+        auto pathCopy = inputFile;
+        theFilename << pathCopy.stem().string() << "_" << i << pathCopy.extension().string();
+        auto finalPath = pathCopy.parent_path() / theFilename.str();
+        outputs[i].open(finalPath, std::ios::binary | std::ios::trunc | std::ios::out);
+        if (outputs[i].fail()) {
+            std::stringstream ss;
+            ss << "Could not open " << finalPath << std::endl;
+            std::string str = ss.str();
+            throw std::runtime_error(str);
+        }
+    }
+}
+void
+doAction(const std::filesystem::path& inputFile, uint32_t numberOfSplits) {
+        if (!std::filesystem::exists(inputFile)) {
+            std::stringstream msg;
+            msg << "The given source input file " << inputFile << " does not exist!" << std::endl;
+            std::string str = msg.str();
+            throw std::runtime_error(str);
+        } else if (std::filesystem::is_directory(inputFile)) {
+            std::stringstream msg;
+            msg << "The given source input file " << inputFile << " is a directory!" << std::endl;
+            std::string str = msg.str();
+            throw std::runtime_error(str);
+        }
+        // for now, just divide it into four different parts as we go through
+        // everything else should be fine!
+        // now we need to make a quad split design
+        try {
+            std::ifstream theSourceFile(inputFile, std::ios::binary | std::ios::in);
+            if (!theSourceFile.is_open()) {
+                std::stringstream msg;
+                msg << "Couldn't open " << inputFile << " for reading!" << std::endl;
+                std::string str = msg.str();
+                throw std::runtime_error(str);
+            }
+            doAction(inputFile, theSourceFile, numberOfSplits);
+        } catch(std::exception& ex) {
+            theSourceFile.close();
+            // rethrow
+            throw ex;
+        }
+}
 int 
 main(int argc, char* argv[]) {
+    uint32_t numberOfSplits = 0;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("help,h", "produce help message")
         ("source", boost::program_options::value<std::filesystem::path>(), "source file to be decomposed")
+        ("divide-into", boost::program_options::value<uint32_t>(&numberOfSplits)->default_value(4), "number of files to split the input into!")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -41,10 +103,16 @@ main(int argc, char* argv[]) {
         std::cout << desc << std::endl;
         return 1;
     }
-    if (!vm.count("source")) {
-        std::cout << "source input file was not set!" << std::endl;
+    try {
+        if (vm.count("source")) {
+            doAction(std::cin, numberOfSplits);
+        }  else {
+            std::filesystem::path inputFile = vm["source"].as<std::filesystem::path>();
+            doAction(inputFile, numberOfSplits);
+        }
+        return 0;
+    } catch (std::exception& ex) {
+        std::cout << ex.what() << std::endl;
         return 1;
-    } 
-    std::filesystem::path inputFile = vm["source"].as<std::filesystem::path>();
-    return 0;
+    }
 }
