@@ -43,7 +43,7 @@ doAction(const std::filesystem::path& basePath, std::istream& inputFile, uint32_
     for (int i = 0; i < numberOfSplits; ++i) {
         // construct 0,1,2,3 versions of the source file
         std::stringstream theFilename;
-        auto pathCopy = inputFile;
+        auto pathCopy = basePath;
         theFilename << pathCopy.stem().string() << "_" << i << pathCopy.extension().string();
         auto finalPath = pathCopy.parent_path() / theFilename.str();
         outputs[i].open(finalPath, std::ios::binary | std::ios::trunc | std::ios::out);
@@ -71,20 +71,14 @@ doAction(const std::filesystem::path& inputFile, uint32_t numberOfSplits) {
         // for now, just divide it into four different parts as we go through
         // everything else should be fine!
         // now we need to make a quad split design
-        try {
-            std::ifstream theSourceFile(inputFile, std::ios::binary | std::ios::in);
-            if (!theSourceFile.is_open()) {
-                std::stringstream msg;
-                msg << "Couldn't open " << inputFile << " for reading!" << std::endl;
-                std::string str = msg.str();
-                throw std::runtime_error(str);
-            }
-            doAction(inputFile, theSourceFile, numberOfSplits);
-        } catch(std::exception& ex) {
-            theSourceFile.close();
-            // rethrow
-            throw ex;
+        std::ifstream theSourceFile(inputFile, std::ios::binary | std::ios::in);
+        if (!theSourceFile.is_open()) {
+            std::stringstream msg;
+            msg << "Couldn't open " << inputFile << " for reading!" << std::endl;
+            std::string str = msg.str();
+            throw std::runtime_error(str);
         }
+        doAction(inputFile, theSourceFile, numberOfSplits);
 }
 int 
 main(int argc, char* argv[]) {
@@ -105,7 +99,7 @@ main(int argc, char* argv[]) {
     }
     try {
         if (vm.count("source")) {
-            doAction(std::cin, numberOfSplits);
+            doAction("", std::cin, numberOfSplits);
         }  else {
             std::filesystem::path inputFile = vm["source"].as<std::filesystem::path>();
             doAction(inputFile, numberOfSplits);
