@@ -97,8 +97,8 @@ main(int argc, char* argv[]) {
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("help,h", "produce help message")
-        ("source", boost::program_options::value<std::filesystem::path>(), "source file to be decomposed")
-        ("divide-into", boost::program_options::value<size_t>(&numberOfSplits)->default_value(4), "number of files to split the input into!")
+        ("source,s", boost::program_options::value<std::filesystem::path>(), "source file to be decomposed")
+        ("divide-into,d", boost::program_options::value<size_t>(&numberOfSplits)->default_value(4), "number of files to split the input into!")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
