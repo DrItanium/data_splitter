@@ -8,3 +8,5 @@ add_executable(data_splitter
 	main.cc)
 
 target_link_libraries(data_splitter Boost::program_options)
+
+install(TARGETS data_splitter DESTINATION bin)
