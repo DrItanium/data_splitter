@@ -99,10 +99,10 @@ main(int argc, char* argv[]) {
     }
     try {
         if (vm.count("source")) {
-            doAction("", std::cin, numberOfSplits);
+           std::filesystem::path inputFile = vm["source"].as<std::filesystem::path>();
+           doAction(inputFile, numberOfSplits);
         }  else {
-            std::filesystem::path inputFile = vm["source"].as<std::filesystem::path>();
-            doAction(inputFile, numberOfSplits);
+           doAction("", std::cin, numberOfSplits);
         }
         return 0;
     } catch (std::exception& ex) {
