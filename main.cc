@@ -32,7 +32,7 @@ SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 #include <memory>
 #include <boost/program_options.hpp>
 void
-doAction(const std::filesystem::path& basePath, std::istream& inputFile, size_t numberOfSplits) {
+doAction(const std::filesystem::path& basePath, std::istream& inputFile, size_t numberOfSplits, size_t numberOfBytesPerTransfer) {
     // okay, at this point we need to open the four files that we are going to
     // be dumping data into!
     auto outputs = std::make_unique<std::ofstream[]>(numberOfSplits);
@@ -54,20 +54,28 @@ doAction(const std::filesystem::path& basePath, std::istream& inputFile, size_t 
             throw std::runtime_error(str);
         }
     }
-
+    auto fn = [&inputFile, &outputs](size_t i) {
+        auto value = inputFile.get();
+        if (inputFile.fail() || inputFile.eof()) {
+            return;
+        } else {
+            outputs[i].put(value);
+        }
+    };
     while (inputFile.good()) {
         for (size_t i = 0; i < numberOfSplits; ++i) {
-            auto value = inputFile.get();
-            if (inputFile.fail() || inputFile.eof()) {
-                return;
-            } else {
-                outputs[i].put(value);
+            for (size_t j = 0; j < numberOfBytesPerTransfer; ++j) {
+                // do this byte by byte to make sure some routine doesn't drop
+                // bytes
+                //
+                /// @todo reimplement with read and write operations
+                fn(i);
             }
         }
     }
 }
 void
-doAction(const std::filesystem::path& inputFile, size_t numberOfSplits) {
+doAction(const std::filesystem::path& inputFile, size_t numberOfSplits, size_t numberOfBytesPerTransfer) {
         if (!std::filesystem::exists(inputFile)) {
             std::stringstream msg;
             msg << "The given source input file " << inputFile << " does not exist!" << std::endl;
@@ -89,16 +97,18 @@ doAction(const std::filesystem::path& inputFile, size_t numberOfSplits) {
             std::string str = msg.str();
             throw std::runtime_error(str);
         }
-        doAction(inputFile, theSourceFile, numberOfSplits);
+        doAction(inputFile, theSourceFile, numberOfSplits, numberOfBytesPerTransfer);
 }
 int 
 main(int argc, char* argv[]) {
     size_t numberOfSplits = 0;
+    size_t numberOfBytesPerTransfer = 0;
     boost::program_options::options_description desc("Allowed options");
     desc.add_options()
         ("help,h", "produce help message")
         ("source,s", boost::program_options::value<std::filesystem::path>(), "source file to be decomposed")
         ("divide-into,d", boost::program_options::value<size_t>(&numberOfSplits)->default_value(4), "number of files to split the input into!")
+        ("bucket-size,z", boost::program_options::value<size_t>(&numberOfBytesPerTransfer)->default_value(1), "number of bytes to put in each file at a time")
         ;
     boost::program_options::variables_map vm;
     boost::program_options::store(boost::program_options::parse_command_line(argc, argv, desc), vm);
@@ -112,12 +122,16 @@ main(int argc, char* argv[]) {
         std::cout << "number of splits is less than 2!" << std::endl;
         return 1;
     }
+    if (numberOfBytesPerTransfer < 1) {
+        std::cout << "number of bytes per transfer is less than 1" << std::endl;
+        return 1;
+    }
     try {
         if (vm.count("source")) {
            std::filesystem::path inputFile = vm["source"].as<std::filesystem::path>();
-           doAction(inputFile, numberOfSplits);
+           doAction(inputFile, numberOfSplits, numberOfBytesPerTransfer);
         }  else {
-           doAction("", std::cin, numberOfSplits);
+           doAction("", std::cin, numberOfSplits, numberOfBytesPerTransfer);
         }
         return 0;
     } catch (std::exception& ex) {
